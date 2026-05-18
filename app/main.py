@@ -6,9 +6,9 @@ from fastapi.responses import JSONResponse
 from .api.routers import department, employee
 from .core.database import dispose_engine
 from .utils import (
-    DomainBadRequestError,
-    DomainNotFoundError,
-    DomainConflictError,
+    DomainBadRequestError400,
+    DomainNotFoundError404,
+    DomainConflictError409,
 )
 from .core.logger import setup_logger, get_logger
 
@@ -40,8 +40,8 @@ async def logging_middleware(request: Request, call_next):
     return response
 
 
-@app.exception_handler(DomainBadRequestError)
-async def bad_request_handler(request: Request, exc: DomainBadRequestError) -> JSONResponse:
+@app.exception_handler(DomainBadRequestError400)
+async def bad_request_handler(request: Request, exc: DomainBadRequestError400) -> JSONResponse:
     """Invalid input; maps to HTTP 400"""
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -49,8 +49,8 @@ async def bad_request_handler(request: Request, exc: DomainBadRequestError) -> J
     )
 
 
-@app.exception_handler(DomainNotFoundError)
-async def not_found_handler(request: Request, exc: DomainNotFoundError) -> JSONResponse:
+@app.exception_handler(DomainNotFoundError404)
+async def not_found_handler(request: Request, exc: DomainNotFoundError404) -> JSONResponse:
     """Map missing entities to HTTP 404."""
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -58,8 +58,8 @@ async def not_found_handler(request: Request, exc: DomainNotFoundError) -> JSONR
     )
 
 
-@app.exception_handler(DomainConflictError)
-async def conflict_handler(request: Request, exc: DomainConflictError) -> JSONResponse:
+@app.exception_handler(DomainConflictError409)
+async def conflict_handler(request: Request, exc: DomainConflictError409) -> JSONResponse:
     """Map domain conflicts to HTTP 409."""
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,

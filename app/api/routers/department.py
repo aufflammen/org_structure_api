@@ -67,5 +67,5 @@ async def delete_department(
         query: Annotated[DepartmentDeleteQuery, Depends()],
         service: Annotated[DepartmentService, Depends(get_department_service)],
 ) -> None:
-    """Delete with cascade or reassign subtree employees."""
+    """Delete department (cascade subtree or reassign employees)."""
     await service.delete(department_id, query)

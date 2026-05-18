@@ -64,8 +64,8 @@ class DepartmentUpdateQuery(BaseModel):
 
 
 class DepartmentDeleteQuery(BaseModel):
-    mode: Annotated[DeleteMode, Field(description="Deletion strategy")]
-    reassign_to_department_id: Annotated[
-        int | None,
-        Field(description="Required when mode='reassign'")
-    ] = None
+    mode: DeleteMode = Field(description="Deletion strategy")
+    reassign_to_department_id: int | None = Field(
+        default=None,
+        description="Required when mode=reassign"
+    )

@@ -11,7 +11,11 @@ from ..schemas import (
     EmployeeResponse,
 )
 
-from ..utils import DomainBadRequestError, DomainConflictError, DomainNotFoundError
+from ..utils import (
+    DomainBadRequestError400,
+    DomainNotFoundError404,
+    DomainConflictError409,
+)
 from ..enums import DeleteMode
 
 
@@ -26,7 +30,7 @@ class DepartmentService:
     async def create(self, payload: DepartmentCreate) -> DepartmentResponse:
         """Create a department after validating uniqueness."""
         if payload.parent_id is not None and not await self._departments.exists(payload.parent_id):
-            raise DomainNotFoundError("Parent department not found")
+            raise DomainNotFoundError404("Parent department not found")
 
         existing = await self._departments.find_by_name_and_parent(
             name=payload.name,
@@ -34,7 +38,7 @@ class DepartmentService:
         )
 
         if existing is not None:
-            raise DomainConflictError("Duplicate department name under this parent")
+            raise DomainConflictError409("Duplicate: department name already exists under this parent")
 
         department = await self._departments.create(
             name=payload.name,
@@ -51,7 +55,7 @@ class DepartmentService:
         """Load recursive department tree to `depth` levels."""
         root = await self._departments.get_by_id(department_id)
         if root is None:
-            raise DomainNotFoundError("Department not found")
+            raise DomainNotFoundError404("Department not found")
 
         return await self._build_tree_node(
             department_id=root.id,
@@ -68,7 +72,7 @@ class DepartmentService:
         """Recursively build ``DepartmentTree`` nodes."""
         department = await self._departments.get_by_id(department_id)
         if department is None:
-            raise DomainNotFoundError("Department not found")
+            raise DomainNotFoundError404("Department not found")
 
         employees: list[EmployeeResponse] = []
         if include_employees:
@@ -115,7 +119,7 @@ class DepartmentService:
         """Partially update name and/or parent_id."""
         department = await self._departments.get_by_id(department_id)
         if department is None:
-            raise DomainNotFoundError("Department not found")
+            raise DomainNotFoundError404("Department not found")
 
         new_name = payload.name or department.name
         new_parent_id = payload.parent_id or department.parent_id
@@ -123,17 +127,20 @@ class DepartmentService:
         if new_name == department.name and new_parent_id == department.parent_id:
             return DepartmentResponse.model_validate(department)
 
-        if not await self._departments.exists(new_parent_id):
-            raise DomainNotFoundError("Parent department not found")
+        if (
+                new_parent_id is not None
+                and not await self._departments.exists(new_parent_id)
+        ):
+            raise DomainNotFoundError404("Parent department not found")
 
         if new_parent_id == department_id:
-            raise DomainConflictError("Department cannot be its own parent")
+            raise DomainConflictError409("Department cannot be its own parent")
 
         if (
                 new_parent_id != department.parent_id
                 and await self._is_descendant(new_parent_id, department_id)
         ):
-            raise DomainConflictError("Department cycle detected")
+            raise DomainConflictError409("Department cycle detected")
 
         duplicate = await self._departments.find_by_name_and_parent(
             name=new_name,
@@ -142,7 +149,7 @@ class DepartmentService:
         )
 
         if duplicate is not None:
-            raise DomainConflictError("Duplicate department name in the same parent")
+            raise DomainConflictError409("Duplicate department name in the same parent")
 
         department.name = new_name
         department.parent_id = new_parent_id
@@ -158,7 +165,7 @@ class DepartmentService:
         """Delete department."""
         department = await self._departments.get_by_id(department_id)
         if department is None:
-            raise DomainNotFoundError("Department not found")
+            raise DomainNotFoundError404("Department not found")
 
         delete_mode = payload.mode
 
@@ -170,22 +177,31 @@ class DepartmentService:
             target_department_id = payload.reassign_to_department_id
 
             if target_department_id is None:
-                raise DomainBadRequestError("reassign_to_department_id is required when mode='reassign'")
-
-            if department_id == target_department_id:
-                raise DomainConflictError("Cannot reassign into the department being deleted")
-
-            if not await self._departments.exists(target_department_id):
-                raise DomainNotFoundError("Target department not found")
-
-            subtree_ids = await self._departments.collect_subtree_ids(department_id)
-            if target_department_id in subtree_ids:
-                raise DomainConflictError(
-                    "Cannot reassign into a department that is being removed",
+                raise DomainBadRequestError400(
+                    "reassign_to_department_id is required for mode=reassign",
                 )
 
+            if department_id == target_department_id:
+                raise DomainBadRequestError400(
+                    "reassign_to_department_id cannot be equal to deleted department id",
+                )
+
+            if not await self._departments.exists(target_department_id):
+                raise DomainNotFoundError404("Department not found")
+
+            # subtree_ids = await self._departments.collect_subtree_ids(department_id)
+            # if target_department_id in subtree_ids:
+            #     raise DomainConflictError409(
+            #         "Cannot reassign into a department that is being removed",
+            #     )
+
+            await self._departments.reparent_children(
+                old_parent_id=department_id,
+                new_parent_id=department.parent_id,
+            )
+
             await self._departments.reassign_employees_to_department(
-                subtree_ids,
+                [department_id],
                 target_department_id,
             )
 
@@ -193,4 +209,4 @@ class DepartmentService:
             await self._session.commit()
 
         else:
-            raise DomainNotFoundError("Delete mode not found")
+            raise DomainBadRequestError400(f"Unsupported delete mode")

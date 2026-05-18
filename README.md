@@ -10,8 +10,8 @@ SQLAlchemy 2.x, PostgreSQL и Alembic.
 - Безопасное перемещение подразделений с проверкой циклов (HTTP 409)
 - Удаление подразделения:
     - **cascade** — каскадное удаление поддерева и сотрудников (FK `ON DELETE CASCADE`)
-    - **reassign** — перенос сотрудников поддерева в целевое подразделение, дочерние узлы поднимаются к родителю
-      удаляемого узла
+    - **reassign** — удаление только указанного узла; сотрудники этого узла переводятся в целевое подразделение; прямые
+      дочерние узлы поднимаются к родителю удаляемого
 - Структурированные HTTP-логи (метод, путь, статус, длительность)
 - OpenAPI-документация: `/docs`
 
@@ -41,8 +41,9 @@ HTTP Request
     → PostgreSQL
 ```
 
-Доменные ошибки (`DomainNotFoundError`, `DomainConflictError`, `DomainBadRequestError`) перехватываются в `app/main.py`и
-преобразуются в HTTP 404 / 409 / 400 с телом `{"detail": "..."}`.
+Доменные ошибки (`DomainBadRequestError400`, `DomainNotFoundError404`, `DomainConflictError409`) перехватываются в
+`app/main.py`и
+преобразуются в HTTP 400 / 404 / 409 с телом `{"detail": "..."}`.
 
 ## Структура проекта
 
@@ -65,7 +66,8 @@ org_structure_api_cursor/
 │   ├── repositories/          # запросы к БД
 │   ├── schemas/               # Pydantic DTO
 │   ├── services/              # бизнес-логика
-│   ├── utils/exceptions.py    # доменные исключения
+│   ├── utils/
+│   │   └── exceptions.py      # доменные исключения
 │   └── main.py                # FastAPI app, middleware, handlers
 ├── migration/                 # Alembic
 │   └── versions/
@@ -87,7 +89,7 @@ org_structure_api_cursor/
 
 ## Установка через Docker Compose
 
-1. Скопируйте файл окружения:
+1. Скопируйте файл с переменными окружения:
 
    ```bash
    cp .env.example .env
@@ -101,9 +103,7 @@ org_structure_api_cursor/
    docker compose up --build
    ```
 
-API: `http://localhost:8000` (порт задаётся `API_PORT`).
-
-При старте контейнера `entrypoint.sh` выполняет `alembic upgrade head`, затем запускает Uvicorn.
+**API:** `http://localhost:8000` (порт задаётся `API_PORT`).
 
 ## Настройка окружения
 
@@ -119,9 +119,6 @@ API: `http://localhost:8000` (порт задаётся `API_PORT`).
 | `POSTGRES_PORT`     | Порт PostgreSQL                                   |
 | `API_PORT`          | Публикуемый порт API (по умолчанию 8000)          |
 | `PGADMIN_*`         | Учётные данные pgAdmin (опционально)              |
-
-Вложенная конфигурация БД загружается через префикс `POSTGRES_` (см. `app/core/config.py`).
-
 
 > Для тестов используется отдельная БД и порт, чтобы не пересекаться с dev/prod PostgreSQL на 5432.
 
@@ -145,6 +142,13 @@ API: `http://localhost:8000` (порт задаётся `API_PORT`).
 
 ### Создание подразделения
 
+`POST /departments/`
+
+| Параметр    | Тип          | Описание                                     |
+|-------------|--------------|----------------------------------------------|
+| `name`      | str          | Название подразделение                       |
+| `parent_id` | int \|  null | ID родительского подразделения (опционально) |
+
 - Обрезка пробелов в `name`
 - Проверка существования `parent_id` (если не `null`)
 - Уникальность `(name, parent_id)` на уровне БД и сервиса
@@ -163,90 +167,49 @@ API: `http://localhost:8000` (порт задаётся `API_PORT`).
 
 ### Удаление
 
-| mode       | Поведение                                                                                                                             |
-|------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| `cascade`  | Удаление узла; дочерние подразделения и сотрудники удаляются каскадом FK                                                              |
-| `reassign` | Сотрудники всего поддерева → `reassign_to_department_id`; прямые дети → родитель удаляемого узла; затем удаляется только целевой узел |
+`DELETE /departments/{id}`
 
-## Входные и выходные данные
+| Параметр                    | Тип | Описание                                                                                   |
+|-----------------------------|-----|--------------------------------------------------------------------------------------------|
+| `mode`                      | str | Режим удаления: `cascade` или `reassign`                                                   |
+| `reassign_to_department_id` | int | Обязателен при `mode=reassign` - ID подразделения для перевода сотрудников удаляемого узла |
 
-### Подразделение (создание)
+#### mode
 
-**Запрос** `POST /departments/`:
+1. `mode=cascade`
+    - удаляется указанное подразделение;
+    - рекурсивно удаляются все дочерние подразделения;
+    - удаляются все сотрудники удаляемого подразделения и дочерних (каскад FK `ON DELETE CASCADE`).
 
-```json
-{
-  "name": "Engineering",
-  "parent_id": null
-}
+2. `mode=reassign`
+    - удаляется только указанное подразделение;
+    - сотрудники **только** удаляемого подразделения переводятся в `reassign_to_department_id`;
+    - дочерние подразделения не удаляются и получают `parent_id`, равный `parent_id` удаляемого узла.
+
+##### Пример
+
+Было:
+
+```text
+HQ
+└── Sales (удаляется)
+    ├── East
+    └── West
 ```
 
-**Ответ** `201`:
+После удаления `Sales` `mode=cascade`:
 
-```json
-{
-  "id": 1,
-  "name": "Engineering",
-  "parent_id": null,
-  "created_at": "2026-05-16T12:00:00+00:00"
-}
+```text
+HQ
 ```
 
-### Дерево
+После удаления `Sales` `mode=reassign, reassign_to_department_id=<HQ_id>`:
 
-**Ответ** `GET /departments/{id}`:
-
-```json
-{
-  "id": 1,
-  "name": "Root",
-  "employees": [],
-  "children": [
-    {
-      "id": 2,
-      "name": "Child",
-      "employees": [
-        {
-          "id": 1,
-          "department_id": 2,
-          "full_name": "Jane Doe",
-          "position": "Engineer",
-          "hired_at": "2024-06-01",
-          "created_at": "2026-05-16T12:00:00+00:00"
-        }
-      ],
-      "children": []
-    }
-  ]
-}
+```text
+HQ
+├── East
+└── West
 ```
-
-### Сотрудник
-
-**Запрос** `POST /departments/{department_id}/employees/`:
-
-```json
-{
-  "full_name": "Ada Lovelace",
-  "position": "Developer",
-  "hired_at": "2024-01-15"
-}
-```
-
-### Ошибки
-
-```json
-{
-  "detail": "Department cycle detected"
-}
-```
-
-| Код | Когда                                                              |
-|-----|--------------------------------------------------------------------|
-| 400 | Невалидный режим удаления, отсутствует `reassign_to_department_id` |
-| 404 | Сущность не найдена                                                |
-| 409 | Дубликат имени, цикл, конфликт reassign                            |
-| 422 | Ошибка валидации Pydantic                                          |
 
 ## Тесты
 
@@ -261,8 +224,6 @@ docker compose -f compose.test.yaml --env-file .env.test up -d
 
 ```bash
 pytest -v
-pytest -v tests/test_departments.py
-pytest -v tests/test_department_service.py   # unit без БД
 ```
 
 Тесты загружают `.env.test`, проверяют `ENV=test`, создают схему через ORM metadata и очищают данные `TRUNCATE` после

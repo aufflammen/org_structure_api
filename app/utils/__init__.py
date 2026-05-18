@@ -1,5 +1,5 @@
 from .exceptions import (
-    DomainBadRequestError,
-    DomainConflictError,
-    DomainNotFoundError
+    DomainBadRequestError400,
+    DomainNotFoundError404,
+    DomainConflictError409,
 )
