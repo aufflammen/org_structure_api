@@ -62,11 +62,4 @@ class Department(Base):
             unique=True,
             postgresql_where=text("parent_id IS NOT NULL"),
         ),
-
-        Index(
-            "ix_departments_name",
-            "name",
-            "parent_id",
-            unique=True,
-        )
     )
