@@ -77,8 +77,6 @@ org_structure_api/
 
 ## Архитектура
 
-Слоистая архитектура с разделением ответственности:
-
 ```text
 HTTP Request
     → Middleware (app/main.py)          # логирование: метод, путь, статус, duration_ms
@@ -122,12 +120,14 @@ HTTP Request
 | Действие                     | Команда                                                    |
 |------------------------------|------------------------------------------------------------|
 | Compose (API + БД + pgAdmin) | `docker compose up --build`                                |
-| Health check                 | `curl http://localhost:8000/health`                        |
+| Health check                 | `http://localhost:8000/health`                             |
 | OpenAPI JSON                 | `http://localhost:8000/openapi.json`                       |
 | Swagger UI                   | [http://localhost:8000/docs](http://localhost:8000/docs)   |
 | ReDoc                        | [http://localhost:8000/redoc](http://localhost:8000/redoc) |
 
-## Переменные окружения (`.env.example`)
+## Переменные окружения
+
+### `.env.example`
 
 | Переменная                 | Описание                                           |
 |----------------------------|----------------------------------------------------|
@@ -147,7 +147,7 @@ HTTP Request
 
 ## API Documentation
 
-Общие соглашения:
+### Общие соглашения
 
 | Аспект                                          | Значение                                                                                  |
 |-------------------------------------------------|-------------------------------------------------------------------------------------------|
