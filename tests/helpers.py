@@ -1,12 +1,13 @@
 from typing import Literal
+
 from httpx import AsyncClient, Response
 
 
 async def post_department(
-        client: AsyncClient,
-        *,
-        name: str,
-        parent_id: int | None = None,
+    client: AsyncClient,
+    *,
+    name: str,
+    parent_id: int | None = None,
 ) -> Response:
     """Helper: create department and return response."""
     response = await client.post(
@@ -17,11 +18,11 @@ async def post_department(
 
 
 async def get_department(
-        client: AsyncClient,
-        department_id: int,
-        *,
-        depth: int = 1,
-        include_employees: bool = True
+    client: AsyncClient,
+    department_id: int,
+    *,
+    depth: int = 1,
+    include_employees: bool = True,
 ) -> Response:
     """Helper: get department and return response."""
     response = await client.get(
@@ -32,11 +33,11 @@ async def get_department(
 
 
 async def patch_department(
-        client: AsyncClient,
-        department_id: int,
-        *,
-        name: str | None = None,
-        parent_id: int | None = None,
+    client: AsyncClient,
+    department_id: int,
+    *,
+    name: str | None = None,
+    parent_id: int | None = None,
 ) -> Response:
     """Helper: patch department and return response."""
     response = await client.patch(
@@ -47,11 +48,11 @@ async def patch_department(
 
 
 async def delete_department(
-        client: AsyncClient,
-        department_id: int,
-        *,
-        mode: Literal["cascade", "reassign"],
-        reassign_to_department_id: int | None = None,
+    client: AsyncClient,
+    department_id: int,
+    *,
+    mode: Literal["cascade", "reassign"],
+    reassign_to_department_id: int | None = None,
 ) -> Response:
     """Helper: delete department and return response."""
 
@@ -61,7 +62,6 @@ async def delete_department(
     }
     params = {k: v for k, v in params.items() if v is not None}
 
-
     response = await client.delete(
         f"/departments/{department_id}",
         params=params,
@@ -70,12 +70,12 @@ async def delete_department(
 
 
 async def post_employee(
-        client: AsyncClient,
-        department_id: int,
-        *,
-        full_name: str,
-        position: str,
-        hired_at: str | None = None,
+    client: AsyncClient,
+    department_id: int,
+    *,
+    full_name: str,
+    position: str,
+    hired_at: str | None = None,
 ) -> Response:
     """Helper: create employee and return response."""
     response = await client.post(

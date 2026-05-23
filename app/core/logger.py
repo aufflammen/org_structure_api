@@ -2,13 +2,17 @@
 
 import logging
 import sys
-from typing import Any
 
 import structlog
+from structlog.typing import EventDict, FilteringBoundLogger, Processor, WrappedLogger
 
 
-def _reorder_keys(desired_order: list[str]):
-    def processor(logger, method_name, event_dict):
+def _reorder_keys(desired_order: list[str]) -> Processor:
+    def processor(
+        logger: WrappedLogger,
+        method_name: str,
+        event_dict: EventDict,
+    ) -> EventDict:
         new_dict = {}
         for key in desired_order:
             if key in event_dict:
@@ -46,6 +50,6 @@ def setup_logger(log_level: str = "INFO") -> None:
     )
 
 
-def get_logger(name: str | None = None) -> Any:
+def get_logger(name: str | None = None) -> FilteringBoundLogger:
     """Return a structlog logger."""
-    return structlog.get_logger(name)
+    return structlog.get_logger(name)  # type: ignore[no-any-return]

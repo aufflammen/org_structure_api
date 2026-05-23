@@ -1,16 +1,17 @@
 from typing import Annotated
-from fastapi import APIRouter, status, Depends
 
-from ..dependencies import get_department_service
+from fastapi import APIRouter, Depends, status
+
 from ...schemas import (
     DepartmentCreate,
+    DepartmentDeleteQuery,
     DepartmentResponse,
     DepartmentTreeQuery,
     DepartmentTreeResponse,
     DepartmentUpdateQuery,
-    DepartmentDeleteQuery,
 )
 from ...services import DepartmentService
+from ..dependencies import get_department_service
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -22,8 +23,8 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
     summary="Create department",
 )
 async def create_department(
-        payload: DepartmentCreate,
-        service: Annotated[DepartmentService, Depends(get_department_service)],
+    payload: DepartmentCreate,
+    service: Annotated[DepartmentService, Depends(get_department_service)],
 ) -> DepartmentResponse:
     """Create department with optional parent."""
     return await service.create(payload)
@@ -35,9 +36,9 @@ async def create_department(
     summary="Get department subtree",
 )
 async def get_department_tree(
-        department_id: int,
-        query: Annotated[DepartmentTreeQuery, Depends()],
-        service: Annotated[DepartmentService, Depends(get_department_service)],
+    department_id: int,
+    query: Annotated[DepartmentTreeQuery, Depends()],
+    service: Annotated[DepartmentService, Depends(get_department_service)],
 ) -> DepartmentTreeResponse:
     """Return department data with nested children up to `depth` levels."""
     return await service.get_tree(department_id, query)
@@ -49,9 +50,9 @@ async def get_department_tree(
     summary="Update department",
 )
 async def update_department(
-        department_id: int,
-        payload: DepartmentUpdateQuery,
-        service: Annotated[DepartmentService, Depends(get_department_service)],
+    department_id: int,
+    payload: DepartmentUpdateQuery,
+    service: Annotated[DepartmentService, Depends(get_department_service)],
 ) -> DepartmentResponse:
     """Partial update for department."""
     return await service.update(department_id, payload)
@@ -63,9 +64,9 @@ async def update_department(
     summary="Delete department",
 )
 async def delete_department(
-        department_id: int,
-        query: Annotated[DepartmentDeleteQuery, Depends()],
-        service: Annotated[DepartmentService, Depends(get_department_service)],
+    department_id: int,
+    query: Annotated[DepartmentDeleteQuery, Depends()],
+    service: Annotated[DepartmentService, Depends(get_department_service)],
 ) -> None:
     """Delete department (cascade subtree or reassign employees)."""
     await service.delete(department_id, query)

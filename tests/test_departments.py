@@ -4,10 +4,10 @@ import pytest
 from httpx import AsyncClient
 
 from .helpers import (
-    post_department,
+    delete_department,
     get_department,
     patch_department,
-    delete_department,
+    post_department,
     post_employee,
 )
 
@@ -15,11 +15,7 @@ from .helpers import (
 @pytest.mark.asyncio
 async def test_create_department(client: AsyncClient) -> None:
     """POST /departments/ creates a root department."""
-    response = await post_department(
-        client,
-        name="  Engineering  ",
-        parent_id=None,
-    )
+    response = await post_department(client, name="  Engineering  ", parent_id=None)
 
     assert response.status_code == 201
     body = response.json()
@@ -32,11 +28,7 @@ async def test_create_department(client: AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_create_department_parent_not_found(client: AsyncClient) -> None:
     """Unknown parent_id returns 404."""
-    response = await post_department(
-        client,
-        name="Orphan",
-        parent_id=42,
-    )
+    response = await post_department(client, name="Orphan", parent_id=42)
     assert response.status_code == 404
     assert response.json()["detail"] == "Parent department not found"
 
@@ -53,9 +45,7 @@ async def test_create_duplicate_name_same_parent(client: AsyncClient) -> None:
         parent_id=root.json()["id"],
     )
     child_same = await post_department(
-        client,
-        name="Child",
-        parent_id=root.json()["id"],
+        client, name="Child", parent_id=root.json()["id"]
     )
 
     assert root.status_code == 201
@@ -83,16 +73,14 @@ async def test_update_department_name(client: AsyncClient) -> None:
     renamed_root = await patch_department(
         client,
         department_id=root_id,
-        name="  Renamed Root "
+        name="  Renamed Root ",
     )
     assert renamed_root.status_code == 200
     assert renamed_root.json()["name"] == "Renamed Root"
     assert renamed_root.json()["parent_id"] is None
 
     renamed_child = await patch_department(
-        client,
-        department_id=child_id,
-        name=" Renamed Child  ",
+        client, department_id=child_id, name=" Renamed Child  "
     )
     assert renamed_child.status_code == 200
     assert renamed_child.json()["name"] == "Renamed Child"
@@ -111,9 +99,7 @@ async def test_update_department_parent_id(client: AsyncClient) -> None:
     )
 
     reparent_child = await patch_department(
-        client,
-        department_id=child.json()["id"],
-        parent_id=root2.json()["id"]
+        client, department_id=child.json()["id"], parent_id=root2.json()["id"]
     )
     assert reparent_child.status_code == 200
     assert reparent_child.json()["name"] == "Child"
@@ -127,9 +113,7 @@ async def test_update_department_parent_id(client: AsyncClient) -> None:
 #     child = await post_department(client, name="Child", parent_id=root.json()["id"])
 #
 #     response = await patch_department(
-#         client,
-#         department_id=child.json()["id"],
-#         parent_id=None,
+#         client, department_id=child.json()["id"], parent_id=None
 #     )
 #
 #     assert response.status_code == 200
@@ -144,9 +128,7 @@ async def test_cycle_forbidden(client: AsyncClient) -> None:
     grand = await post_department(client, name="Grand", parent_id=child.json()["id"])
 
     response = await patch_department(
-        client,
-        department_id=root.json()["id"],
-        parent_id=grand.json()["id"],
+        client, department_id=root.json()["id"], parent_id=grand.json()["id"]
     )
 
     assert response.status_code == 409
@@ -179,10 +161,7 @@ async def test_get_department_tree(client: AsyncClient) -> None:
     )
 
     response = await get_department(
-        client,
-        department_id=root.json()["id"],
-        depth=2,
-        include_employees=True,
+        client, department_id=root.json()["id"], depth=2, include_employees=True
     )
 
     assert response.status_code == 200
@@ -211,10 +190,7 @@ async def test_tree_depth_limits_children(client: AsyncClient) -> None:
     await post_department(client, name="Grand", parent_id=child.json()["id"])
 
     response = await get_department(
-        client,
-        root.json()["id"],
-        depth=1,
-        include_employees=False
+        client, root.json()["id"], depth=1, include_employees=False
     )
 
     assert response.status_code == 200
@@ -231,7 +207,9 @@ async def test_tree_depth_validation(client: AsyncClient) -> None:
     response2 = await get_department(client, root.json()["id"], depth=10)
 
     assert response1.status_code == 422
-    assert "Input should be greater than or equal to 1" in str(response1.json()["detail"])
+    assert "Input should be greater than or equal to 1" in str(
+        response1.json()["detail"]
+    )
 
     assert response2.status_code == 422
     assert "Input should be less than or equal to 5" in str(response2.json()["detail"])
@@ -243,10 +221,7 @@ async def test_cascade_delete(client: AsyncClient) -> None:
     root = await post_department(client, name="Root")
     child = await post_department(client, name="Child", parent_id=root.json()["id"])
     await post_employee(
-        client,
-        department_id=child.json()["id"],
-        full_name="John",
-        position="Dev"
+        client, department_id=child.json()["id"], full_name="John", position="Dev"
     )
 
     response = await delete_department(client, root.json()["id"], mode="cascade")
@@ -266,13 +241,13 @@ async def test_reassign_delete_reparents_children(client: AsyncClient) -> None:
     middle = await post_department(client, name="Middle", parent_id=root.json()["id"])
     leaf = await post_department(client, name="Leaf", parent_id=middle.json()["id"])
     target = await post_department(client, name="Target")
-    employee = await post_employee(client, middle.json()["id"], full_name="Mover", position="dev")
+    await post_employee(client, middle.json()["id"], full_name="Mover", position="dev")
 
     response = await delete_department(
         client,
         middle.json()["id"],
         mode="reassign",
-        reassign_to_department_id=target.json()["id"]
+        reassign_to_department_id=target.json()["id"],
     )
     assert response.status_code == 204
 
@@ -281,19 +256,13 @@ async def test_reassign_delete_reparents_children(client: AsyncClient) -> None:
     assert leaf_response.json()["name"] == "Leaf"
 
     root_tree = await get_department(
-        client,
-        root.json()["id"],
-        depth=2,
-        include_employees=True,
+        client, root.json()["id"], depth=2, include_employees=True
     )
     child_names = [c["name"] for c in root_tree.json()["children"]]
     assert "Leaf" in child_names
 
     target_tree = await get_department(
-        client,
-        target.json()["id"],
-        depth=1,
-        include_employees=True,
+        client, target.json()["id"], depth=1, include_employees=True
     )
     employee_names = [e["full_name"] for e in target_tree.json()["employees"]]
     assert "Mover" in employee_names
@@ -306,10 +275,7 @@ async def test_reassign_requires_target(client: AsyncClient) -> None:
     dept = await post_department(client, name="ToDelete")
 
     response = await delete_department(
-        client,
-        dept.json()["id"],
-        mode="reassign",
-        reassign_to_department_id=None,
+        client, dept.json()["id"], mode="reassign", reassign_to_department_id=None
     )
 
     assert response.status_code == 400
@@ -327,7 +293,7 @@ async def test_reassign_same_department_forbidden(client: AsyncClient) -> None:
         client,
         dept.json()["id"],
         mode="reassign",
-        reassign_to_department_id=dept.json()["id"]
+        reassign_to_department_id=dept.json()["id"],
     )
 
     assert response.status_code == 400
@@ -353,20 +319,14 @@ async def test_reassign_to_child_department_allowed(client: AsyncClient) -> None
     assert response.status_code == 204
 
     east_tree = await get_department(
-        client,
-        east.json()["id"],
-        depth=1,
-        include_employees=True,
+        client, east.json()["id"], depth=1, include_employees=True
     )
 
     assert east_tree.status_code == 200
     assert any(e["full_name"] == "Seller" for e in east_tree.json()["employees"])
 
     root_tree = await get_department(
-        client,
-        root.json()["id"],
-        depth=2,
-        include_employees=False,
+        client, root.json()["id"], depth=2, include_employees=False
     )
 
     child_names = [c["name"] for c in root_tree.json()["children"]]
@@ -380,8 +340,12 @@ async def test_reassign_keeps_child_department_employees(client: AsyncClient) ->
     middle = await post_department(client, name="Middle", parent_id=root.json()["id"])
     leaf = await post_department(client, name="Leaf", parent_id=middle.json()["id"])
     target = await post_department(client, name="Target")
-    await post_employee(client, middle.json()["id"], full_name="Middle Worker", position="Dev")
-    await post_employee(client, leaf.json()["id"], full_name="Leaf Worker", position="Dev")
+    await post_employee(
+        client, middle.json()["id"], full_name="Middle Worker", position="Dev"
+    )
+    await post_employee(
+        client, leaf.json()["id"], full_name="Leaf Worker", position="Dev"
+    )
 
     response = await delete_department(
         client,
@@ -392,20 +356,14 @@ async def test_reassign_keeps_child_department_employees(client: AsyncClient) ->
     assert response.status_code == 204
 
     target_tree = await get_department(
-        client,
-        target.json()["id"],
-        depth=1,
-        include_employees=True,
+        client, target.json()["id"], depth=1, include_employees=True
     )
     target_names = {e["full_name"] for e in target_tree.json()["employees"]}
     assert "Middle Worker" in target_names
     assert "Leaf Worker" not in target_names
 
     leaf_tree = await get_department(
-        client,
-        leaf.json()["id"],
-        depth=1,
-        include_employees=True,
+        client, leaf.json()["id"], depth=1, include_employees=True
     )
     leaf_names = {e["full_name"] for e in leaf_tree.json()["employees"]}
     assert "Leaf Worker" in leaf_names
@@ -426,10 +384,7 @@ async def test_reassign_target_department_not_found(client: AsyncClient) -> None
     dept = await post_department(client, name="ToDelete")
 
     response = await delete_department(
-        client,
-        dept.json()["id"],
-        mode="reassign",
-        reassign_to_department_id=99999,
+        client, dept.json()["id"], mode="reassign", reassign_to_department_id=99999
     )
 
     assert response.status_code == 404

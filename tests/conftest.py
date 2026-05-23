@@ -11,14 +11,14 @@ from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
-    create_async_engine
+    create_async_engine,
 )
 
 from app.core.config import get_config
 from app.core.database import get_session
+from app.enums.env import Env
 from app.main import app
 from app.models.base import Base
-from app.enums.env import Env
 
 
 @pytest.fixture(scope="session")
@@ -28,11 +28,11 @@ async def engine() -> AsyncGenerator[AsyncEngine]:
     assert config.env == Env.TEST
 
     test_engine = create_async_engine(config.db.url, pool_pre_ping=True)
-    async with test_engine.begin() as connect:  # type: ignore[arg-type]
+    async with test_engine.begin() as connect:
         await connect.run_sync(Base.metadata.drop_all)
         await connect.run_sync(Base.metadata.create_all)
     yield test_engine
-    async with test_engine.begin() as connect:  # type: ignore[arg-type]
+    async with test_engine.begin() as connect:
         await connect.run_sync(Base.metadata.drop_all)
     await test_engine.dispose()
 
@@ -41,7 +41,7 @@ async def engine() -> AsyncGenerator[AsyncEngine]:
 async def reset_tables(engine: AsyncEngine) -> AsyncGenerator[None]:
     """Truncate data after each test for isolation."""
     yield
-    async with engine.begin() as connect:  # type: ignore[arg-type]
+    async with engine.begin() as connect:
         await connect.execute(text("TRUNCATE departments RESTART IDENTITY CASCADE"))
 
 
@@ -56,8 +56,8 @@ async def client(engine: AsyncEngine) -> AsyncGenerator[AsyncClient]:
 
     app.dependency_overrides[get_session] = _session_override
     async with AsyncClient(
-            transport=ASGITransport(app=app),
-            base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
     ) as ac:
         yield ac
     app.dependency_overrides.clear()

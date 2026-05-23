@@ -13,9 +13,9 @@ class DepartmentRepository:
         self._session = session
 
     async def create(
-            self,
-            name: str,
-            parent_id: int | None,
+        self,
+        name: str,
+        parent_id: int | None,
     ) -> Department:
         """Create department."""
         department = Department(
@@ -47,11 +47,11 @@ class DepartmentRepository:
         return department is not None
 
     async def find_by_name_and_parent(
-            self,
-            name: str,
-            parent_id: int | None,
-            *,
-            exclude_id: int | None = None,
+        self,
+        name: str,
+        parent_id: int | None,
+        *,
+        exclude_id: int | None = None,
     ) -> Department | None:
         """Find department by unique (name, parent_id)."""
         department_query = select(Department).where(Department.name == name)
@@ -100,9 +100,9 @@ class DepartmentRepository:
         return collected
 
     async def reparent_children(
-            self,
-            old_parent_id: int,
-            new_parent_id: int | None,
+        self,
+        old_parent_id: int,
+        new_parent_id: int | None,
     ) -> None:
         """Set parent_id for all direct children of old_parent_id."""
         await self._session.execute(

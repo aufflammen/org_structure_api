@@ -10,12 +10,12 @@ from ..services import DepartmentService, EmployeeService
 
 
 async def get_department_service(
-        session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DepartmentService:
     return DepartmentService(session)
 
 
 async def get_employee_service(
-        session: Annotated[AsyncSession, Depends(get_session)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> EmployeeService:
     return EmployeeService(session)

@@ -13,7 +13,7 @@ class DatabaseConfig(BaseModel):
     host: str
     port: int
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def url(self) -> str:
         return (

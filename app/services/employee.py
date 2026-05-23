@@ -2,7 +2,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories import DepartmentRepository, EmployeeRepository
 from ..schemas import EmployeeCreate, EmployeeResponse
-
 from ..utils import DomainNotFoundError404
 
 
@@ -15,9 +14,9 @@ class EmployeeService:
         self._employees = EmployeeRepository(session)
 
     async def create_for_department(
-            self,
-            department_id: int,
-            payload: EmployeeCreate,
+        self,
+        department_id: int,
+        payload: EmployeeCreate,
     ) -> EmployeeResponse:
         """Create employee under `department_id` if department exists."""
         if not await self._departments.exists(department_id):

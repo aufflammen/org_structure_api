@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, DateTime, Date, func
+from sqlalchemy import Date, DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -32,5 +32,5 @@ class Employee(Base):
 
     department: Mapped[Department] = relationship(
         "Department",
-        back_populates="employees"
+        back_populates="employees",
     )

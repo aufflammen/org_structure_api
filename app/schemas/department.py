@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .employee import EmployeeResponse
 from ..enums import DeleteMode
+from .employee import EmployeeResponse
 
 
 class DepartmentCreate(BaseModel):
@@ -67,5 +67,5 @@ class DepartmentDeleteQuery(BaseModel):
     mode: DeleteMode = Field(description="Deletion strategy")
     reassign_to_department_id: int | None = Field(
         default=None,
-        description="Required when mode=reassign"
+        description="Required when mode=reassign",
     )

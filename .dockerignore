@@ -1,11 +1,48 @@
-.venv
+# --- Environment & secrets ---
 .env
-__pycache__
-*.py[cod]
-.pytest_cache
-.mypy_cache
-.idea
-.git
-*.egg-info
-dist
-build
+.env.example
+.env.test
+
+# --- Virtual environments ---
+.venv/
+
+# --- IDEs & editors ---
+.idea/
+.vscode/
+
+# --- Python / packaging / build ---
+**/__pycache__/
+**/*.py[cod]
+
+# --- Test, coverage, linters & type checkers ---
+**/.mypy_cache/
+**/.ruff_cache/
+**/.pytest_cache/
+.coverage
+pytest-report.xml
+
+# --- Logs ---
+**/*.log
+**/logs/
+
+# --- Tool caches ---
+**/.cache/
+
+# --- Version control & CI/CD ---
+.git/
+.gitignore
+.gitlab-ci.yml
+
+# --- Documentation --
+**/*.md
+**/README
+**/README.*
+
+# --- Compose & local orchestration ---
+compose.yaml
+compose.test.yaml
+
+# --- Tests & dev tooling ---
+tests/
+requirements-dev.txt
+pyproject.toml

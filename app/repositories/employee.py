@@ -13,11 +13,11 @@ class EmployeeRepository:
         self._session = session
 
     async def create(
-            self,
-            department_id: int,
-            full_name: str,
-            position: str,
-            hired_at: date | None,
+        self,
+        department_id: int,
+        full_name: str,
+        position: str,
+        hired_at: date | None,
     ) -> Employee:
         """Create employee."""
         employee = Employee(
@@ -34,6 +34,6 @@ class EmployeeRepository:
     async def list_for_department(self, department_id: int) -> list[Employee]:
         """Return all employees in a department."""
         result = await self._session.execute(
-            select(Employee).where(Employee.department_id == department_id)
+            select(Employee).where(Employee.department_id == department_id),
         )
         return list(result.scalars().all())

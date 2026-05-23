@@ -43,6 +43,8 @@ services:
     env_file:
       - ./.env
     volumes:
+      - ./alembic.ini:/app/alembic.ini
+      - ./migration:/app/migration
       - ./app:/app/app
     restart: unless-stopped
     depends_on:

@@ -1,11 +1,27 @@
-.venv
+# --- Environment & secrets ---
 .env
-__pycache__
+
+# --- Virtual environments ---
+.venv/
+
+# --- IDEs & editors ---
+.idea/
+.vscode/
+
+# --- Python / packaging / build ---
+__pycache__/
 *.py[cod]
-.pytest_cache
-.mypy_cache
-.idea
-.git
-*.egg-info
-dist
-build
+
+# --- Test, coverage, linters & type checkers ---
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+pytest-report.xml
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Tool caches ---
+.cache/

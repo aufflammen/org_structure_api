@@ -1,20 +1,22 @@
-from time import perf_counter
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, status
+from time import perf_counter
+
+from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from .api.routers import department, employee
 from .core.database import dispose_engine
+from .core.logger import get_logger, setup_logger
 from .utils import (
     DomainBadRequestError400,
-    DomainNotFoundError404,
     DomainConflictError409,
+    DomainNotFoundError404,
 )
-from .core.logger import setup_logger, get_logger
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     setup_logger()
     yield
     await dispose_engine()
@@ -24,7 +26,10 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.middleware("http")
-async def logging_middleware(request: Request, call_next):
+async def logging_middleware(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
     """Emit structured request logs with timing."""
     logger = get_logger("http")
     start = perf_counter()
@@ -41,7 +46,10 @@ async def logging_middleware(request: Request, call_next):
 
 
 @app.exception_handler(DomainBadRequestError400)
-async def bad_request_handler(request: Request, exc: DomainBadRequestError400) -> JSONResponse:
+async def bad_request_handler(
+    request: Request,
+    exc: DomainBadRequestError400,
+) -> JSONResponse:
     """Invalid input; maps to HTTP 400"""
     return JSONResponse(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -50,7 +58,10 @@ async def bad_request_handler(request: Request, exc: DomainBadRequestError400) -
 
 
 @app.exception_handler(DomainNotFoundError404)
-async def not_found_handler(request: Request, exc: DomainNotFoundError404) -> JSONResponse:
+async def not_found_handler(
+    request: Request,
+    exc: DomainNotFoundError404,
+) -> JSONResponse:
     """Map missing entities to HTTP 404."""
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
@@ -59,7 +70,10 @@ async def not_found_handler(request: Request, exc: DomainNotFoundError404) -> JS
 
 
 @app.exception_handler(DomainConflictError409)
-async def conflict_handler(request: Request, exc: DomainConflictError409) -> JSONResponse:
+async def conflict_handler(
+    request: Request,
+    exc: DomainConflictError409,
+) -> JSONResponse:
     """Map domain conflicts to HTTP 409."""
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
